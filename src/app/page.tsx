@@ -1,17 +1,28 @@
 import Link from "next/link";
 import { type SanityDocument } from "next-sanity";
-
 import { client } from "@/sanity/client";
 
+// Sanity Query to fetch posts
 const POSTS_QUERY = `*[
   _type == "post"
   && defined(slug.current)
-]|order(publishedAt desc)[0...12]{_id, title, slug, publishedAt}`;
+] | order(publishedAt desc)[0...12] {
+  _id, title, slug, publishedAt
+}`;
 
-const options = { next: { revalidate: 30 } };
+// Enforce Static Site Generation (SSG)
+export const dynamic = "force-static";
+
+export async function generateMetadata() {
+  return {
+    title: "Blog Posts",
+    description: "A collection of the latest blog posts.",
+  };
+}
 
 export default async function IndexPage() {
-  const posts = await client.fetch<SanityDocument[]>(POSTS_QUERY, {}, options);
+  // Fetch data ONLY at build time
+  const posts = await client.fetch<SanityDocument[]>(POSTS_QUERY, {}, { cache: "force-cache" });
 
   return (
     <main className="container mx-auto min-h-screen max-w-3xl p-8">
