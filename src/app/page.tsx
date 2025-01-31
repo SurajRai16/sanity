@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { type SanityDocument } from "next-sanity";
-
 import { client } from "@/sanity/client";
 
 const POSTS_QUERY = `*[
@@ -8,10 +7,9 @@ const POSTS_QUERY = `*[
   && defined(slug.current)
 ]|order(publishedAt desc)[0...12]{_id, title, slug, publishedAt}`;
 
-const options = { next: { revalidate: 30 } };
-
 export default async function IndexPage() {
-  const posts = await client.fetch<SanityDocument[]>(POSTS_QUERY, {}, options);
+  // Fetch data only at build time
+  const posts = await client.fetch<SanityDocument[]>(POSTS_QUERY, {}, { cache: "force-cache" });
 
   return (
     <main className="container mx-auto min-h-screen max-w-3xl p-8">
@@ -29,3 +27,6 @@ export default async function IndexPage() {
     </main>
   );
 }
+
+// ✅ Prevent re-fetching on every request by marking as a static route
+export const dynamic = "force-static"; // Ensures this page is statically generated at build time
