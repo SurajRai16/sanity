@@ -10,7 +10,6 @@ const POSTS_QUERY = `*[
   _id, title, slug, publishedAt
 }`;
 
-<<<<<<< HEAD
 // Enforce Static Site Generation (SSG)
 export const dynamic = "force-static";
 
@@ -23,10 +22,6 @@ export async function generateMetadata() {
 
 export default async function IndexPage() {
   // Fetch data ONLY at build time
-=======
-export default async function IndexPage() {
-  // Fetch data only at build time
->>>>>>> f913cabddd4e6bd6c7d4b4a62a3d2779d8725dc8
   const posts = await client.fetch<SanityDocument[]>(POSTS_QUERY, {}, { cache: "force-cache" });
 
   return (
@@ -45,9 +40,3 @@ export default async function IndexPage() {
     </main>
   );
 }
-<<<<<<< HEAD
-=======
-
-// ✅ Prevent re-fetching on every request by marking as a static route
-export const dynamic = "force-static"; // Ensures this page is statically generated at build time
->>>>>>> f913cabddd4e6bd6c7d4b4a62a3d2779d8725dc8
