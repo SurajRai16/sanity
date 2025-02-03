@@ -1,4 +1,4 @@
-import { groq, PortableText, type SanityDocument } from "next-sanity";
+import { PortableText, type SanityDocument } from "next-sanity";
 import imageUrlBuilder from "@sanity/image-url";
 import type { SanityImageSource } from "@sanity/image-url/lib/types/types";
 import { client } from "@/sanity/client";
@@ -6,8 +6,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 // ✅ Define queries
-const POST_QUERY = groq`*[_type == "post" && slug.current == $slug][0]`;
-const POSTS_QUERY = groq`*[_type == "post"]{slug}`;
+const POST_QUERY = `*[_type == "post" && slug.current == $slug][0]`;
+const POSTS_QUERY = `*[_type == "post"]{slug}`;
 
 const { projectId, dataset } = client.config();
 const urlFor = (source: SanityImageSource) =>
@@ -15,26 +15,25 @@ const urlFor = (source: SanityImageSource) =>
     ? imageUrlBuilder({ projectId, dataset }).image(source)
     : null;
 
-const options = { cache: "force-cache" };
-
 // ✅ Fetch post data at build time (SSG)
 async function getPost(slug: string): Promise<SanityDocument | null> {
-  console.log(`Fetching post: ${slug} at build time`);
-  return client.fetch<SanityDocument>(POST_QUERY, { slug });
+  console.log(`Fetching post: ${slug} at build time`); // Debugging log
+  const post = await client.fetch<SanityDocument>(POST_QUERY, { slug }, { cache: "force-cache" });
+  return post || null;
 }
 
 // ✅ Generate static paths at build time
 export async function generateStaticParams() {
   console.log("🔄 Running generateStaticParams at build time...");
-  const posts = await client.fetch<{ slug: { current: string } }[]>(POSTS_QUERY);
+  const posts = await client.fetch<SanityDocument[]>(POSTS_QUERY, {}, { cache: "force-cache" });
 
   console.log("✅ Posts fetched:", posts);
   return posts.map((post) => ({
-    slug: post.slug.current, // Generates static pages for each slug
+    slug: post.slug.current,
   }));
 }
 
-// ✅ Page Component (SSG)
+// ✅ Page Component (Server Component)
 export default async function PostPage({ params }: { params: { slug: string } }) {
   const post = await getPost(params.slug);
 
@@ -53,6 +52,59 @@ export default async function PostPage({ params }: { params: { slug: string } })
         <p>Published: {new Date(post.publishedAt).toLocaleDateString()}</p>
         {Array.isArray(post.body) && <PortableText value={post.body} />}
       </div>
+    </main>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import Link from "next/link";
+import { type SanityDocument } from "next-sanity";
+
+import { client } from "@/sanity/client";
+
+const POSTS_QUERY = `*[
+  _type == "post"
+  && defined(slug.current)
+]|order(publishedAt desc)[0...12]{_id, title, slug, publishedAt}`;
+
+export default async function getStaticProps() {
+  const posts = await client.fetch<SanityDocument[]>(POSTS_QUERY, {});
+
+  return (
+    <main className="container mx-auto min-h-screen max-w-3xl p-8">
+      <h1 className="text-4xl font-bold mb-8">Posts</h1>
+      <ul className="flex flex-col gap-y-4">
+        {posts.map((post) => (
+          <li className="hover:underline" key={post._id}>
+            <Link href={`/${post.slug.current}`}>
+              <h2 className="text-xl font-semibold">{post.title}</h2>
+              <p>{new Date(post.publishedAt).toLocaleDateString()}</p>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </main>
   );
 }

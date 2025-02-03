@@ -1,28 +1,29 @@
 import Link from "next/link";
-import { type SanityDocument } from "next-sanity";
+import { groq, type SanityDocument } from "next-sanity";
 import { client } from "@/sanity/client";
 
-// Sanity Query to fetch posts
-const POSTS_QUERY = `*[
-  _type == "post"
-  && defined(slug.current)
-] | order(publishedAt desc)[0...12] {
-  _id, title, slug, publishedAt
-}`;
+// ✅ Query to fetch all posts
+const POSTS_QUERY = groq`
+  *[_type == "post" && defined(slug.current)]
+  | order(publishedAt desc)[0...12] {
+    _id, title, slug, publishedAt
+  }
+`;
 
-// Enforce Static Site Generation (SSG)
-export const dynamic = "force-static";
+const options = { cache: "force-cache" };
 
-export async function generateMetadata() {
-  return {
-    title: "Blog Posts",
-    description: "A collection of the latest blog posts.",
-  };
+// ✅ Fetch posts at build time (SSG)
+export async function generateStaticParams() {
+  const posts = await client.fetch<{ slug: { current: string } }[]>(POSTS_QUERY);
+
+  return posts.map((post) => ({
+    slug: post.slug.current, // Generates static pages for each slug
+  }));
 }
 
+// ✅ Page Component
 export default async function IndexPage() {
-  // Fetch data ONLY at build time
-  const posts = await client.fetch<SanityDocument[]>(POSTS_QUERY, {}, { cache: "force-cache" });
+  const posts = await client.fetch<SanityDocument[]>(POSTS_QUERY);
 
   return (
     <main className="container mx-auto min-h-screen max-w-3xl p-8">
